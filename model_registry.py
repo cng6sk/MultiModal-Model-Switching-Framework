@@ -4,7 +4,6 @@ from dotenv import load_dotenv
 from models.qwen_vl_client import QwenVLClient
 from models.glm4v_client import GLM4VClient
 
-# 加载.env文件
 load_dotenv()
 
 # 模型配置
@@ -28,16 +27,16 @@ _MODEL_INSTANCES = {}
 
 def get_model(name: str):
     """获取指定名称的模型实例，使用单例模式"""
-    # 如果模型实例已经存在，直接返回
+    # 模型实例已经存在
     if name in _MODEL_INSTANCES:
         return _MODEL_INSTANCES[name]
     
-    # 检查模型配置是否存在
+    # 检查模型配置
     config = MODEL_CONFIGS.get(name)
     if not config:
         raise ValueError(f"Model '{name}' not found in registry. Available models: {list(MODEL_CONFIGS.keys())}")
     
-    # 检查API密钥是否存在
+    # 检查API密钥
     if not config["api_key"]:
         raise ValueError(f"Missing API key for {name}! Please check your .env file.")
     
