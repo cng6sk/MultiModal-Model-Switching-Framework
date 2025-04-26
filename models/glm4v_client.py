@@ -17,9 +17,7 @@ class GLM4VClient(ModelInterface):
         )
     
     def chat(self, messages: List[Dict[str, Any]], stream: bool = False) -> Union[str, Generator[str, None, None]]:
-        """
-        进行对话，支持文本和图像输入
-        """
+
         completion = self.client.chat.completions.create(
             model=self.model,
             messages=messages,
