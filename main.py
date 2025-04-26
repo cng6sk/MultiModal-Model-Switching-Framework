@@ -3,6 +3,8 @@ import sys
 from model_registry import get_model, list_available_models
 from typing import List, Dict, Any
 from pprint import pprint
+import imghdr 
+import copy
 
 def encode_image(image_path: str) -> str:
     """将图像文件编码为base64字符串"""
@@ -17,14 +19,34 @@ def create_text_message(text: str, role: str = "user") -> Dict[str, Any]:
     }
 
 def create_image_message(image_path: str, prompt: str) -> Dict[str, Any]:
-    """创建包含图像的消息"""
+    """创建包含图像的消息，确保兼容不同模型的格式要求"""
     base64_image = encode_image(image_path)
+    
+    # 自动检测图像类型
+    with open(image_path, "rb") as image_file:
+        image_type = imghdr.what(image_file)
+    
+    # 如果检测失败，根据文件扩展名推断
+    if not image_type:
+        if image_path.lower().endswith('.jpg') or image_path.lower().endswith('.jpeg'):
+            image_type = 'jpeg'
+        elif image_path.lower().endswith('.png'):
+            image_type = 'png'
+        elif image_path.lower().endswith('.webp'):
+            image_type = 'webp'
+        else:
+            # 默认为png
+            image_type = 'png'
+    
+    # 使用正确的MIME类型
+    image_url = f"data:image/{image_type};base64,{base64_image}"
+    
     return {
         "role": "user",
         "content": [
             {
                 "type": "image_url",
-                "image_url": {"url": f"data:image/png;base64,{base64_image}"}
+                "image_url": {"url": image_url}
             },
             {
                 "type": "text",
@@ -42,25 +64,23 @@ def handle_stream_response(stream_generator, chat_history):
         full_response += chunk
         print(chunk, end="", flush=True)
     
-    print()  # 打印换行
+    print()
     
     # 将完整回复添加到对话历史
     chat_history.append(create_text_message(full_response, role="assistant"))
     return full_response
 
 def main():
-    # 获取可用模型列表
     available_models = list_available_models()
     
     print("可用模型:")
     for i, i_model_name in enumerate(available_models):
         print(f"{i+1}. {i_model_name}")
     
-    # 获取用户选择
     print(f"请选择模型 (1-{len(available_models)}, 默认: 1): ", end="")
     model_choice = input().strip()
     
-    # 处理用户输入(默认选第一个)
+    # 处理输入(默认选第一个)
     if model_choice == "":
         model_index = 0  
     else:
@@ -87,7 +107,7 @@ def main():
     
     # 循环对话
     while True:
-        print("\n选项: 1-发送文本, 2-发送图片, 3-切换流式模式, 4-切换模型, 5-删除一轮对话, q-退出")
+        print("\n选项: 1-发送文本, 2-发送图片, 3-切换流式模式, 4-切换模型, 5-删除一轮对话, 6-输出messages, q-退出")
         choice = input("请选择: ")
         
         if choice.lower() == 'q':
@@ -102,7 +122,9 @@ def main():
             # 加入图片消息
             image_path = input("请输入图片路径: ")
             prompt = input("请输入关于图片的问题: ")
-            chat_history.append(create_image_message(image_path, prompt))
+            a = create_image_message(image_path, prompt)
+            # print(a)
+            chat_history.append(a)
             
         elif choice == '3':
             # 切换流式模式
@@ -149,7 +171,7 @@ def main():
             continue
         elif choice == '5':
             # 删除对话历史中的最后一条消息（debug）
-            pprint(chat_history)
+            # pprint(chat_history)
             if len(chat_history) > 1:
                 removed_message = chat_history.pop()
                 # 检查是否需要同时删除对话的另一半（用户问题或AI回复）
@@ -166,18 +188,24 @@ def main():
             else:
                 print("对话历史为空或仅包含系统消息，无法删除")
             continue
+        
+        elif choice == '6':
+            pprint(chat_history)
+            continue
+
 
         print(f"\n正在使用 {model_name} 处理请求...\n")
         
         try:
             # 流式模式选择
+            chat_history_copy = copy.deepcopy(chat_history)
             if stream_mode:
-                stream_generator = model.chat(chat_history, stream=True)
+                stream_generator = model.chat(chat_history_copy, stream=True)
                 handle_stream_response(stream_generator, chat_history)
             else:
-                response = model.chat(chat_history, stream=False)
+                response = model.chat(chat_history_copy, stream=False)
                 print(f"AI助手: {response}")
-                # 将AI回复添加到对话历史
+                # 回复添加到对话历史
                 chat_history.append(create_text_message(response, role="assistant"))
         except Exception as e:
             print(f"模型调用出错: {e}")
