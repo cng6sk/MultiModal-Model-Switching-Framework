@@ -19,14 +19,12 @@ def create_text_message(text: str, role: str = "user") -> Dict[str, Any]:
     }
 
 def create_image_message(image_path: str, prompt: str) -> Dict[str, Any]:
-    """创建包含图像的消息，确保兼容不同模型的格式要求"""
+    """创建包含图像的消息"""
     base64_image = encode_image(image_path)
-    
-    # 自动检测图像类型
+    # 自动检测
     with open(image_path, "rb") as image_file:
         image_type = imghdr.what(image_file)
-    
-    # 如果检测失败，根据文件扩展名推断
+    # 若检测失败，根据文件扩展名
     if not image_type:
         if image_path.lower().endswith('.jpg') or image_path.lower().endswith('.jpeg'):
             image_type = 'jpeg'
@@ -35,9 +33,7 @@ def create_image_message(image_path: str, prompt: str) -> Dict[str, Any]:
         elif image_path.lower().endswith('.webp'):
             image_type = 'webp'
         else:
-            # 默认为png
             image_type = 'png'
-    
     # 使用正确的MIME类型
     image_url = f"data:image/{image_type};base64,{base64_image}"
     
@@ -55,18 +51,16 @@ def create_image_message(image_path: str, prompt: str) -> Dict[str, Any]:
         ]
     }
 
-def handle_stream_response(stream_generator, chat_history):
-    """处理流式响应，并将完整回复添加到对话历史中"""
+def handle_stream_response(stream_generator, chat_history, model_name):
+    """处理流式响应，并添加到 messages"""
     full_response = ""
-    print("AI助手: ", end="", flush=True)
+    print(f"{model_name}: ", end="", flush=True)
     
     for chunk in stream_generator:
         full_response += chunk
-        print(chunk, end="", flush=True)
-    
+        print(chunk, end="", flush=True)  
     print()
-    
-    # 将完整回复添加到对话历史
+    # 添加到 messages
     chat_history.append(create_text_message(full_response, role="assistant"))
     return full_response
 
@@ -102,8 +96,9 @@ def main():
         create_text_message("你是一个有用的AI助手，可以理解图像并回答问题。", role="system")
     ]
     
-    print("是否启用流式输出模式? (y/n)")
-    stream_mode = input().lower() == 'y'
+    print("是否启用流式输出模式? (y/n, 默认: y)")
+    stream_mode_input = input().lower()
+    stream_mode = stream_mode_input != 'n'
     
     # 循环对话
     while True:
@@ -201,10 +196,10 @@ def main():
             chat_history_copy = copy.deepcopy(chat_history)
             if stream_mode:
                 stream_generator = model.chat(chat_history_copy, stream=True)
-                handle_stream_response(stream_generator, chat_history)
+                handle_stream_response(stream_generator, chat_history, model_name)
             else:
                 response = model.chat(chat_history_copy, stream=False)
-                print(f"AI助手: {response}")
+                print(f"{model_name}: {response}")
                 # 回复添加到对话历史
                 chat_history.append(create_text_message(response, role="assistant"))
         except Exception as e:
@@ -221,3 +216,7 @@ if __name__ == "__main__":
 # 请总结一下上面的所有图片。
 # src\dog_and_girl.jpeg
 # 请问图中有什么东西，简要回答
+# 请总结一下上面的所有内容。 
+# 根据图像写一首诗。
+# src\Sprite-0002.png
+# 据上面的所有图像写一首词，念奴娇。不要给出解析。

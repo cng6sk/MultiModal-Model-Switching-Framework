@@ -3,6 +3,9 @@ from typing import Dict, Optional
 from dotenv import load_dotenv
 from models.qwen_vl_client import QwenVLClient
 from models.glm4v_client import GLM4VClient
+from models.doubao_client import DoubaoClient
+from models.hunyuan_vision_client import HunyuanVisionClient
+from models.moonshot_v1_vision_client import MoonshotVisionClient
 
 load_dotenv()
 
@@ -17,8 +20,26 @@ MODEL_CONFIGS = {
     "glm-4v": {
         "class": GLM4VClient,
         "api_key": os.getenv("ZHIPUAI_API_KEY"),
-        "base_url": "https://open.bigmodel.cn/api/paas/v4",
+        "base_url": None,
         "default_model": "glm-4v-plus"
+    },
+    "doubao-vision": {
+        "class": DoubaoClient,
+        "api_key": os.getenv("ARK_API_KEY"),
+        "base_url": None,
+        "default_model": "doubao-1-5-vision-pro-32k-250115"
+    },
+    "hunyuan-vision": {
+        "class": HunyuanVisionClient,
+        "api_key": os.getenv("HUNYUAN_API_KEY"),
+        "base_url": "https://api.hunyuan.cloud.tencent.com/v1",
+        "default_model": "hunyuan-turbo-vision"
+    },
+    "moonshot-vision": {
+        "class": MoonshotVisionClient,
+        "api_key": os.getenv("MOONSHOT_API_KEY"),
+        "base_url": "https://api.moonshot.cn/v1",
+        "default_model": "moonshot-v1-32k-vision-preview"
     }
 }
 
